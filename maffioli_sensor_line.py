@@ -54,6 +54,14 @@ def random_angles():
    psi = random.uniform(0, 2*m.pi)
    return theta, phi, psi
 
+#Random position for the eddy
+def random_position():
+    x = random.uniform(-x_boundary*L, x_boundary*L)
+    y = random.uniform(-y_boundary*L, y_boundary*L)
+    z = random.uniform(-z_boundary*L, z_boundary*L)
+    a = np.array([x, y, z])
+    return a
+
 #Set of all sensor positions on the x-axis
 def positionvectorxaxis():
     x = np.linspace(-x_boundary*L, x_boundary*L, Nx)
@@ -73,7 +81,6 @@ def positionvectorrotated(theta_x, theta_y, theta_z):
 def positionvectordisplaced(pos_vector, a):
     a = a[:, np.newaxis]
     pos_vector_displaced = pos_vector + a
-    print(pos_vector_displaced)
     return pos_vector_displaced
 
 #Velocity line on the x-axis, takes input of a position vector
@@ -102,16 +109,53 @@ def xaxisplotter(pos_vector, u, v, w):
 
 #Unit test of a single eddy which can be manually placed at any position or angle
 def main():
+    #Generate random angles
     theta_x, theta_y, theta_z = random_angles()
     theta_x, theta_y, theta_z = 0, m.pi/2, 0
+    #Rotate the sensor line
     pos_vector_rotated = positionvectorrotated(theta_x, theta_y, theta_z)
+    #Displace the sensor line
     pos_vector_displaced = positionvectordisplaced(pos_vector_rotated, np.array([50, 0, 0]))
+    #Calculate the velocity components on the rotated and displaced sensor line
     u, v, w = velocityline(pos_vector_displaced)
+    #Generate the an untransformed sensor line on the x-axis
     x0 = positionvectorxaxis()
+    #Plot the transformed velocities on the untransformed sensor line on the x-axis
     xaxisplotter(x0, u, v, w)
 
-main()
+#main()
 
+def manyeddies(N_eddies):
+    #Generate random angles
+    theta_x, theta_y, theta_z = random_angles()
+    #Rotate the sensor line
+    pos_vector_rotated = positionvectorrotated(theta_x, theta_y, theta_z)
+    #Displace the sensor line
+    pos_vector_displaced = positionvectordisplaced(pos_vector_rotated, np.array([0, 0, 0]))
+    #Calculate the velocity components on the rotated and displaced sensor line
+    u, v, w = velocityline(pos_vector_displaced)
+    for N in range(N_eddies):
+        #Generate random angles
+        theta_x, theta_y, theta_z = random_angles()
+        #Rotate the sensor line
+        pos_vector_rotated = positionvectorrotated(theta_x, theta_y, theta_z)
+        #Generate random position
+        a = random_position()
+        #print(a)
+        #Displace the sensor line
+        pos_vector_displaced = positionvectordisplaced(pos_vector_rotated, a)
+        #Calculate the velocity components on the rotated and displaced sensor line
+        u_new, v_new, w_new = velocityline(pos_vector_displaced)
+        u = np.add(u, u_new)
+        v = np.add(v, v_new)
+        w = np.add(w, w_new)
+        print(u_new)
+    #Generate the an untransformed sensor line on the x-axis
+    x0 = positionvectorxaxis()
+    #Plot the transformed velocities on the untransformed sensor line on the x-axis
+    xaxisplotter(x0, u, v, w)
+
+manyeddies(100000)
 
     
 
