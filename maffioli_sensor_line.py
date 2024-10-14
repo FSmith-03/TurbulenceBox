@@ -7,11 +7,12 @@ from skimage import measure
 from matplotlib.widgets import Slider
 import random
 import math as m
+import timeit
 
 #Constants
 L = 1
 tol = 0.05
-x_boundary = 1000
+x_boundary = 100
 y_boundary = 2.95
 z_boundary = 2.95
 Nxf = 2*x_boundary/tol
@@ -93,6 +94,27 @@ def velocityline(pos_vector):
     w = np.zeros_like(u)
     return u, v, w
 
+#Enhanced velocity line function that does not calculate the velocity at every point but only the local coordinates
+def velocitylineenhanced(pos_vector):
+    x = pos_vector[0]
+    y = pos_vector[1]
+    z = pos_vector[2]
+    
+    # Create a boolean mask where |x| < 2.95L
+    mask = np.abs(x) < 2.95
+    
+    # Initialize u, v, and w as zero arrays
+    u = np.zeros_like(x)
+    v = np.zeros_like(x)
+    w = np.zeros_like(x)
+    
+    # Apply calculations only where the mask is True
+    factor = np.exp(-(x**2 + y**2 + z**2) / (2*L**2))
+    u[mask] = -y[mask] * factor[mask]
+    v[mask] = x[mask] * factor[mask]
+    # w remains zeros as per the original logic
+    
+    return u, v, w
 #Plotter for the sensor line on the x-axis, takes input of the position vector and the velocity components
 def xaxisplotter(pos_vector, u, v, w):
     x = pos_vector[0]
@@ -100,13 +122,28 @@ def xaxisplotter(pos_vector, u, v, w):
     if np.size(x) == np.size(abs_velocity):
         fig, ax = plt.subplots()
         ax.plot(x, abs_velocity)
-        ax.set_xlabel('x')
+        ax.set_xlabel('x/L')
         ax.set_ylabel('abs_velocity')
         plt.title('Sensor line on x-axis')
         plt.show()
     else:
         print('Size mismatch, x has size', np.size(x), 'and abs_velocity has size', np.size(abs_velocity))
 
+def structure_function(pos_vector, u, v, w):
+    abs_velocity = np.sqrt(u**2 + v**2 + w**2)
+    x = pos_vector[0]
+    r = np.linspace(tol, (Nx-1)*tol, Nx-1)
+    S = np.zeros_like(r)
+    for i in range(Nx-1):
+        S1 = np.mean((abs_velocity[i] - abs_velocity[i+1])**2)
+        S2 = np.mean((abs_velocity[i] - abs_velocity[i+2])**2) 
+    fig, ax = plt.subplots()
+    print(r)
+    ax.plot(r, S)
+    ax.set_xlabel('r')
+    ax.set_ylabel('S')
+    plt.title('Structure function')
+    plt.show()
 #Unit test of a single eddy which can be manually placed at any position or angle
 def main():
     #Generate random angles
@@ -130,8 +167,10 @@ def manyeddies(N_eddies):
     theta_x, theta_y, theta_z = random_angles()
     #Rotate the sensor line
     pos_vector_rotated = positionvectorrotated(theta_x, theta_y, theta_z)
+    #Generate random position
+    a = random_position()
     #Displace the sensor line
-    pos_vector_displaced = positionvectordisplaced(pos_vector_rotated, np.array([0, 0, 0]))
+    pos_vector_displaced = positionvectordisplaced(pos_vector_rotated, a)
     #Calculate the velocity components on the rotated and displaced sensor line
     u, v, w = velocityline(pos_vector_displaced)
     for N in range(N_eddies):
@@ -141,7 +180,6 @@ def manyeddies(N_eddies):
         pos_vector_rotated = positionvectorrotated(theta_x, theta_y, theta_z)
         #Generate random position
         a = random_position()
-        #print(a)
         #Displace the sensor line
         pos_vector_displaced = positionvectordisplaced(pos_vector_rotated, a)
         #Calculate the velocity components on the rotated and displaced sensor line
@@ -149,15 +187,17 @@ def manyeddies(N_eddies):
         u = np.add(u, u_new)
         v = np.add(v, v_new)
         w = np.add(w, w_new)
-        print(u_new)
     #Generate the an untransformed sensor line on the x-axis
     x0 = positionvectorxaxis()
     #Plot the transformed velocities on the untransformed sensor line on the x-axis
     xaxisplotter(x0, u, v, w)
+    #Calculate the structure function
+    #structure_function(x0, u, v, w)
 
-manyeddies(100000)
+#manyeddies(1000)
 
-    
+time_taken = timeit.timeit(lambda: manyeddies(100000), number=1)
+print(f"Time taken: {time_taken} seconds")   
 
 
 
