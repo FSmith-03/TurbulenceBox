@@ -20,12 +20,72 @@ def main():
     xaxis = k.positionvectorxaxis()
     a_list = []
     for i in range(N_E):
-        print("Eddy number: ", i)
+        if (i+1) % 1000 == 0:
+            print("Eddy number: ", i)
+        #print("Eddy number: ", i)
         thetax, thetay, thetaz = k.random_angles()
         R = k.total_matrix(thetax, thetay, thetaz)
         a = k.random_position()
-        a_list.append(a.reshape(3))
+        #a_list.append(a.reshape(3))
         #print("a: ", a)
+        #print("a", a[:, np.newaxis])
+        xaxis_translated = xaxis - a
+        #print(xaxis_translated.shape)
+        xaxis_rotated = R @ xaxis_translated
+        #print("xaxis_rotated: ", xaxis_rotated)
+        #print("xaxis_translated", xaxis_translated)
+        u, v, w = k.velocitylineenhanced(xaxis_rotated)
+        #print("u: ", max(u))
+        R = k.total_matrix(-thetax, -thetay, -thetaz)
+        u_rotated, v_rotated, w_rotated = R @ np.array([u, v, w])
+        #print("u_rotated: ", u_rotated)
+        #print(u_rotated)
+        u_total += u_rotated
+        v_total += v_rotated
+        w_total += w_rotated
+    #furthest_eddies = [a for a in a_list if a[0] == max(a_list, key=lambda pos: pos[0])[0]]
+    #print("Furthest eddy: ", furthest_eddies)
+    #print("Plotting Velocity Components")
+    #p.xaxisplotter(xaxis, u_total)
+    #p.xaxisplotter(xaxis, v_total)
+    #p.xaxisplotter(xaxis, w_total)
+    #print("Plotting Eddy Positions")
+    #p.eddyplotter(a_list, 'x')
+    print("Plotting Isotropic Turbulence Correlations f and g")
+    p.isotropic_turbulence_plot(xaxis, u_total, v_total)
+    print("Plotting Structure Function")
+    p.structure_plotter(xaxis, u_total)
+    return
+
+
+def two_eddy_test():
+    N_E = 3
+    print("Number of eddies: ", N_E)
+    Nx = k.constants()[7]
+    u_total = np.zeros(Nx)
+    v_total = np.zeros(Nx)
+    w_total = np.zeros(Nx)
+    xaxis = k.positionvectorxaxis()
+    a_list = []
+    for i in range(N_E):
+        print("Eddy number: ", i)
+        thetax, thetay, thetaz = k.random_angles()
+        if i == 0:
+            thetax = 0
+            thetay = 0
+            thetaz = 0
+        if i == 1:
+            thetax = m.pi/4
+            thetay = 0
+            thetaz = 0
+        if i == 2:
+            thetax = 0
+            thetay = m.pi/4
+            thetaz = 0
+        R = k.total_matrix(thetax, thetay, thetaz)
+        a = k.random_position(online=True)
+        a_list.append(a.reshape(3))
+        print("a: ", a[0])
         #print("a", a[:, np.newaxis])
         xaxis_translated = xaxis - a
         #print(xaxis_translated.shape)
@@ -47,7 +107,7 @@ def main():
     p.xaxisplotter(xaxis, v_total)
     p.xaxisplotter(xaxis, w_total)
     p.eddyplotter(a_list, 'x')
-    p.isotropic_turbulence_plot(xaxis, u_total, v_total)
     return
 
+#two_eddy_test()
 main()

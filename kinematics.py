@@ -16,7 +16,7 @@ def spacefiller(x_boundary, y_boundary, z_boundary):
 def constants():
     L = 1
     tol = 0.05
-    x_boundary = 20
+    x_boundary = 100
     y_boundary = 2.95
     z_boundary = 2.95
     Nxf = 2*x_boundary/tol

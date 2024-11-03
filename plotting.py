@@ -203,37 +203,74 @@ def rotation_check(axis_rotated_translated, N_E):
     plt.show()
 
 def isotropic_turbulence_plot(pos_vector, u, v):
+    #Load tolerance and limit of plotting
     tol = k.constants()[1]
     limit = 10
+    #Calculate the maximum index of the plotted arrays
     max_index = int(limit/tol)
-    x = pos_vector[0:max_index]
-    N_u = len(u[0:max_index])
+    #Assign the maximum index of the velocity array
+    N_u = len(u)
+    #Create an aray of integers from 0 to N_u to be used as the total number of compared points
     s = np.arange(0, N_u)
+    #Create an array of spacings to be plotted
     r = np.linspace(tol, max_index*tol, max_index)
+    #Create empty arrays for the correlation functions
     f = []
     g = []
+    #Iterate over the number of velocity points
     for i in range(N_u):
+        #Reset the product list for each spacing
         product_list_f = []
         product_list_g = []
+        #Iterate over the number of compared points
         for j in range(N_u - s[i]):
+            #Store the product of the velocity components at the compared points
             product_list_f.append(u[j]*u[j+s[i]])
             product_list_g.append(v[j]*v[j+s[i]])
         #print("Product list mean for", i, "is", np.mean(product_list))
+        #Store the mean of the product list in the correlation function arrays
         f.append(np.mean(product_list_f))
         g.append(np.mean(product_list_g))
+    #Normalize the correlation functions
     if f[0] != 0:
-        f = f/f[0]
+        f = f[0:max_index]/f[0]
     else:
-        f = f
+        f = f[0:max_index]
     if g[0] != 0:
-        g = g/g[0]
+        g = g[0:max_index]/g[0]
     else:
-        g = g
+        g = g[0:max_index]
+    #Plot the correlation functions
     fig, ax = plt.subplots()
     ax.plot(r, f, label='f')
     ax.plot(r, g, label='g')
     ax.set_xlabel('r/L')
     ax.set_ylabel('Correlation function')
-    plt.legend
+    plt.legend()
     plt.title('Correlation function')
+    plt.show()
+
+def structure_plotter(pos_vector, u, limit=10):
+    #Load tolerance and limit of plotting
+    tol = k.constants()[1]
+    max_idex_plot = int(limit/tol)
+    N_u = len(u)
+    #Create an aray of integers from 0 to N_u to be used as the total number of compared points
+    s = np.arange(0, N_u)
+    #Create an array of spacings to be plotted
+    r = np.linspace(tol, max_idex_plot*tol, max_idex_plot)
+    #Create empty arrays for the structure function
+    f = []
+    #Iterate over the number of velocity points
+    for i in range(N_u):
+        product_list = []
+        for j in range(N_u - s[i]):
+            product_list.append((u[j]-u[j+s[i]])**2)
+        f.append(np.mean(product_list))
+    f = f[0:max_idex_plot]
+    fig, ax = plt.subplots()
+    ax.plot(r, f)
+    ax.set_xlabel('r/L')
+    ax.set_ylabel('f')
+    plt.title('Structure function')
     plt.show()
