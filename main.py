@@ -4,109 +4,148 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from skimage import measure
 from matplotlib.widgets import Slider
 import random
+from numba import njit, prange
+import random
 import math as m
 import timeit
 import plotly.graph_objects as go
 import kinematics as k
 import plotting as p
+import pandas as pd
+
+def write_to_csv(data, filename="output.csv"):
+    # Convert each array in `data` to a DataFrame column
+    df = pd.DataFrame(data)
+    df.to_csv(filename, index=False)
+    print(f"Data written to {filename}")
 
 def main():
+    #Load constants
     N_E = k.constants()[10]
     print("Number of eddies: ", N_E)
     Nx = k.constants()[7]
+    #Initialize arrays for velocity components
     u_total = np.zeros(Nx)
     v_total = np.zeros(Nx)
     w_total = np.zeros(Nx)
+    #Generate x-axis
     xaxis = k.positionvectorxaxis()
-    a_list = []
+    #Iterate over all eddies
     for i in range(N_E):
+        #Print eddy number for every 1000 eddies
         if (i+1) % 1000 == 0:
-            print("Eddy number: ", i)
-        #print("Eddy number: ", i)
+            print("Eddy number: ", i+1)
+        #Generate random angles
         thetax, thetay, thetaz = k.random_angles()
+        #Calculate rotation matrix
         R = k.total_matrix(thetax, thetay, thetaz)
+        #Generate random position
         a = k.random_position()
-        #a_list.append(a.reshape(3))
-        #print("a: ", a)
-        #print("a", a[:, np.newaxis])
+        #Translate x-axis
         xaxis_translated = xaxis - a
-        #print(xaxis_translated.shape)
+        #Rotate translated x-axis
         xaxis_rotated = R @ xaxis_translated
-        #print("xaxis_rotated: ", xaxis_rotated)
-        #print("xaxis_translated", xaxis_translated)
+        #Calculate velocity components
         u, v, w = k.velocitylineenhanced(xaxis_rotated)
-        #print("u: ", max(u))
+        #Rotate velocity components by inverse angles
         R = k.total_matrix(-thetax, -thetay, -thetaz)
         u_rotated, v_rotated, w_rotated = R @ np.array([u, v, w])
-        #print("u_rotated: ", u_rotated)
-        #print(u_rotated)
+        #Add rotated velocity components to total velocity components
         u_total += u_rotated
         v_total += v_rotated
         w_total += w_rotated
-    #furthest_eddies = [a for a in a_list if a[0] == max(a_list, key=lambda pos: pos[0])[0]]
-    #print("Furthest eddy: ", furthest_eddies)
-    #print("Plotting Velocity Components")
-    #p.xaxisplotter(xaxis, u_total)
-    #p.xaxisplotter(xaxis, v_total)
-    #p.xaxisplotter(xaxis, w_total)
-    #print("Plotting Eddy Positions")
-    #p.eddyplotter(a_list, 'x')
-    print("Plotting Isotropic Turbulence Correlations f and g")
-    p.isotropic_turbulence_plot(xaxis, u_total, v_total)
+    #Plot correlation and structure functions
+    start_time = timeit.default_timer()
+    r, f, g, f_s, max_index = k.correlation_functions_vect(xaxis, u_total, v_total)
+    elapsed = timeit.default_timer() - start_time
+    print("Time elapsed: ", elapsed)
+    write_to_csv_variable = True
+    if write_to_csv_variable == True:
+        print("Writing data to output1_20000.csv")
+        write_to_csv({
+        "u_total": u_total,
+        "v_total": v_total,
+        "w_total": w_total,
+        }, "output1_20000.csv")
+        print("Writing data to output2_20000.csv")
+        write_to_csv({
+        "f": f,
+        "g": g,
+        "f_s": f_s,
+        }, "output2_20000.csv")
+    p.isotropic_turbulence_plot(r, f, g, max_index)
+    p.theoretical_f(r, f, max_index)
+    p.theoretical_g(r, g, max_index)
+    f_filtered, g_filtered = k.f_and_g_filter(f, g)
     print("Plotting Structure Function")
-    p.structure_plotter(xaxis, u_total)
+    p.structure_plotter(r, f_s, max_index)
+    E_k, k_array = k.energy_spectrum(r, f_filtered, g_filtered)
+    print("Plotting Energy Spectrum")
+    p.energy_spectrum_plot(E_k, k_array)
+    plt.show()
     return
 
+@njit
+def random_angles_fast(N):
+    theta = np.random.uniform(0, 2*m.pi, size=N)
+    phi = np.random.uniform(0, 2*m.pi, size=N)
+    psi = np.random.uniform(0, 2*m.pi, size=N)
+    return theta, phi, psi
 
-def two_eddy_test():
-    N_E = 3
-    print("Number of eddies: ", N_E)
+@njit
+def total_matrix_fast(theta_x, theta_y, theta_z):
+    # Implement inline matrix multiplication for performance.
+    return np.array([
+        [np.cos(theta_y) * np.cos(theta_z), -np.cos(theta_y) * np.sin(theta_z), np.sin(theta_y)],
+        [np.cos(theta_x) * np.sin(theta_z) + np.sin(theta_x) * np.sin(theta_y) * np.cos(theta_z),
+         np.cos(theta_x) * np.cos(theta_z) - np.sin(theta_x) * np.sin(theta_y) * np.sin(theta_z),
+         -np.sin(theta_x) * np.cos(theta_y)],
+        [np.sin(theta_x) * np.sin(theta_z) - np.cos(theta_x) * np.sin(theta_y) * np.cos(theta_z),
+         np.sin(theta_x) * np.cos(theta_z) + np.cos(theta_x) * np.sin(theta_y) * np.sin(theta_z),
+         np.cos(theta_x) * np.cos(theta_y)]
+    ])
+
+def main_optimized():
+    # Load constants once
+    N_E = k.constants()[10]
+    print(N_E)
     Nx = k.constants()[7]
-    u_total = np.zeros(Nx)
-    v_total = np.zeros(Nx)
-    w_total = np.zeros(Nx)
     xaxis = k.positionvectorxaxis()
-    a_list = []
-    for i in range(N_E):
-        print("Eddy number: ", i)
-        thetax, thetay, thetaz = k.random_angles()
-        if i == 0:
-            thetax = 0
-            thetay = 0
-            thetaz = 0
-        if i == 1:
-            thetax = m.pi/4
-            thetay = 0
-            thetaz = 0
-        if i == 2:
-            thetax = 0
-            thetay = m.pi/4
-            thetaz = 0
-        R = k.total_matrix(thetax, thetay, thetaz)
-        a = k.random_position(online=True)
-        a_list.append(a.reshape(3))
-        print("a: ", a[0])
-        #print("a", a[:, np.newaxis])
-        xaxis_translated = xaxis - a
-        #print(xaxis_translated.shape)
+    
+    # Initialize total velocity arrays
+    u_total, v_total, w_total = np.zeros(Nx), np.zeros(Nx), np.zeros(Nx)
+    
+    # Generate random angles and positions for all eddies at once
+    print("Generating random angles and positions")
+    thetax, thetay, thetaz = random_angles_fast(N_E)
+    positions = np.array([k.random_position() for _ in range(N_E)])
+    print('Beginning loop')
+    for i in prange(N_E):  # Parallel loop over eddies
+        if i+1 % 1000 == 0:
+            print("Eddy number: ", i+1)
+        # Rotation matrix calculation
+        R = total_matrix_fast(thetax[i], thetay[i], thetaz[i])
+        
+        # Translate and rotate x-axis
+        xaxis_translated = xaxis - positions[i, :]
         xaxis_rotated = R @ xaxis_translated
-        #print("xaxis_rotated: ", xaxis_rotated)
-        #print("xaxis_translated", xaxis_translated)
-        u, v, w = k.velocityline(xaxis_rotated)
-        #print("u: ", max(u))
-        R = k.total_matrix(-thetax, -thetay, -thetaz)
-        u_rotated, v_rotated, w_rotated = R @ np.array([u, v, w])
-        #print("u_rotated: ", u_rotated)
-        #print(u_rotated)
-        u_total += u_rotated
-        v_total += v_rotated
-        w_total += w_rotated
-    furthest_eddies = [a for a in a_list if a[0] == max(a_list, key=lambda pos: pos[0])[0]]
-    print("Furthest eddy: ", furthest_eddies)
-    p.xaxisplotter(xaxis, u_total)
-    p.xaxisplotter(xaxis, v_total)
-    p.xaxisplotter(xaxis, w_total)
-    p.eddyplotter(a_list, 'x')
+        
+        # Calculate and accumulate velocity components
+        u, v, w = k.velocitylineenhanced(xaxis_rotated)
+        u_total += u
+        v_total += v
+        w_total += w
+    print("Writing data to output.csv")
+    write_to_csv({
+    "u_total": u_total,
+    "v_total": v_total,
+    "w_total": w_total
+    }, "output_10000.csv")
+    print("Plotting Isotropic Turbulence Correlations f and g")
+    r, f, g = k.correlation_functions(xaxis, u_total, v_total)
+    p.isotropic_turbulence_plot(r, f, g)
+    print("Plotting Structure Function")
+    p.structure_plotter(xaxis, u_total)
     return
 
 #two_eddy_test()

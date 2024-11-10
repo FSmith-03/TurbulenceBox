@@ -202,75 +202,54 @@ def rotation_check(axis_rotated_translated, N_E):
     ax.legend()
     plt.show()
 
-def isotropic_turbulence_plot(pos_vector, u, v):
-    #Load tolerance and limit of plotting
-    tol = k.constants()[1]
-    limit = 10
-    #Calculate the maximum index of the plotted arrays
-    max_index = int(limit/tol)
-    #Assign the maximum index of the velocity array
-    N_u = len(u)
-    #Create an aray of integers from 0 to N_u to be used as the total number of compared points
-    s = np.arange(0, N_u)
-    #Create an array of spacings to be plotted
-    r = np.linspace(tol, max_index*tol, max_index)
-    #Create empty arrays for the correlation functions
-    f = []
-    g = []
-    #Iterate over the number of velocity points
-    for i in range(N_u):
-        #Reset the product list for each spacing
-        product_list_f = []
-        product_list_g = []
-        #Iterate over the number of compared points
-        for j in range(N_u - s[i]):
-            #Store the product of the velocity components at the compared points
-            product_list_f.append(u[j]*u[j+s[i]])
-            product_list_g.append(v[j]*v[j+s[i]])
-        #print("Product list mean for", i, "is", np.mean(product_list))
-        #Store the mean of the product list in the correlation function arrays
-        f.append(np.mean(product_list_f))
-        g.append(np.mean(product_list_g))
-    #Normalize the correlation functions
-    if f[0] != 0:
-        f = f[0:max_index]/f[0]
-    else:
-        f = f[0:max_index]
-    if g[0] != 0:
-        g = g[0:max_index]/g[0]
-    else:
-        g = g[0:max_index]
-    #Plot the correlation functions
+def isotropic_turbulence_plot(r, f, g, max_index):
+    r = r[0:max_index]
+    f = f[0:max_index]
+    g = g[0:max_index]
     fig, ax = plt.subplots()
     ax.plot(r, f, label='f')
     ax.plot(r, g, label='g')
     ax.set_xlabel('r/L')
     ax.set_ylabel('Correlation function')
     plt.legend()
-    plt.title('Correlation function')
-    plt.show()
+    plt.title('Correlation Functions')
 
-def structure_plotter(pos_vector, u, limit=10):
-    #Load tolerance and limit of plotting
-    tol = k.constants()[1]
-    max_idex_plot = int(limit/tol)
-    N_u = len(u)
-    #Create an aray of integers from 0 to N_u to be used as the total number of compared points
-    s = np.arange(0, N_u)
-    #Create an array of spacings to be plotted
-    r = np.linspace(tol, max_idex_plot*tol, max_idex_plot)
-    #Create empty arrays for the structure function
-    f = []
-    #Iterate over the number of velocity points
-    for i in range(N_u):
-        product_list = []
-        for j in range(N_u - s[i]):
-            product_list.append((u[j]-u[j+s[i]])**2)
-        f.append(np.mean(product_list))
-    f = f[0:max_idex_plot]
+def energy_spectrum_plot(E_k, k_array):
+    fig, ax = plt.subplots()
+    ax.plot(k_array, E_k)
+    ax.set_xlabel('k')
+    ax.set_ylabel('E(k)')
+    plt.title('Energy Spectrum')
+
+def structure_plotter(r, f, max_index):
+    f = f[0:max_index]
+    r = r[0:max_index]
     fig, ax = plt.subplots()
     ax.plot(r, f)
     ax.set_xlabel('r/L')
     ax.set_ylabel('f')
     plt.title('Structure function')
-    plt.show()
+
+def theoretical_f(r, f, max_index):
+    f = f[0:max_index]
+    L_e = k.constants()[0]
+    f_theoretical = np.exp(-r**2/L_e**2)
+    fig, ax = plt.subplots()
+    ax.plot(r, f, label='f', c='r')
+    ax.plot(r, f_theoretical, label='Theoretical f', c = 'b', linestyle='--')
+    ax.set_xlabel('r/L_e')
+    ax.set_ylabel('f')
+    plt.legend()
+    plt.title('Structure function')
+
+def theoretical_g(r, g, max_index):
+    g = g[0:max_index]
+    L_e = k.constants()[0]
+    g_theoretical = (1 - r**2/L_e**2) * np.exp(-r**2/L_e**2)
+    fig, ax = plt.subplots()
+    ax.plot(r, g, label='g', c='r')
+    ax.plot(r, g_theoretical, label='Theoretical g', c = 'b', linestyle='--')
+    ax.set_xlabel('r/L_e')
+    ax.set_ylabel('g')
+    plt.legend()
+    plt.title('Structure function')

@@ -16,7 +16,7 @@ def spacefiller(x_boundary, y_boundary, z_boundary):
 def constants():
     L = 1
     tol = 0.05
-    x_boundary = 100
+    x_boundary = 20000
     y_boundary = 2.95
     z_boundary = 2.95
     Nxf = 2*x_boundary/tol
@@ -145,7 +145,7 @@ def velocitylineenhanced(pos_vector):
     z = pos_vector[2]
     
     # Create a boolean mask where |x| < 2.95L
-    mask = np.abs(x) < 4*L
+    mask = np.abs(np.sqrt(x**2 + y**2 + z**2)) < 4*L
     
     # Initialize u, v, and w as zero arrays
     u = np.zeros_like(x)
@@ -159,6 +159,202 @@ def velocitylineenhanced(pos_vector):
     # w remains zeros as per the original logic
     
     return u, v, w
+
+def correlation_functions(pos_vector, u, v):
+    #Load tolerance and limit of plotting
+    tol = constants()[1]
+    limit = 10
+    #Calculate the maximum index of the plotted arrays
+    max_index = int(limit/tol)
+    #Assign the maximum index of the velocity array
+    N_u = len(u)
+    #Create an aray of integers from 0 to N_u to be used as the total number of compared points
+    s = np.arange(0, N_u)
+    #Create an array of spacings to be plotted
+    r = np.linspace(tol, max_index*tol, max_index)
+    #Create empty arrays for the correlation functions
+    f = []
+    g = []
+    f_s = []
+
+    ## please parallelize this loop for 4 cores
+    #Iterate over the number of velocity points
+    for i in range(N_u):
+        #Reset the product list for each spacing
+        product_list_f = []
+        product_list_g = []
+        product_list_f_s = []
+        #Iterate over the number of compared points
+        for j in range(N_u - s[i]):
+            #Store the product of the velocity components at the compared points
+            product_list_f.append(u[j]*u[j+s[i]])
+            product_list_g.append(v[j]*v[j+s[i]])
+            product_list_f_s.append((u[j]-u[j+s[i]])**2)
+        #print("Product list mean for", i, "is", np.mean(product_list))
+        #Store the mean of the product list in the correlation function arrays
+        f.append(np.mean(product_list_f))
+        g.append(np.mean(product_list_g))
+        f_s.append(np.mean(product_list_f_s))
+    #Normalize the correlation functions
+    if f[0] != 0:
+        f = f/f[0]
+    else:
+        f = f
+    if g[0] != 0:
+        g = g/g[0]
+    else:
+        g = g
+    return r, f, g, f_s, max_index
+
+import numpy as np
+
+def correlation_functions_vect(xaxis, u_total, v_total):
+    tol = constants()[1]
+    N_u = len(u_total)
+    limit = 10
+    s = np.arange(N_u)
+    max_index = int(limit/tol)
+    r = np.linspace(tol, max_index*tol, max_index)
+    f = []
+    g = []
+    f_s = []
+    
+    for i in range(N_u):
+        shift = s[i]
+        if shift < N_u:
+            u_shifted = np.roll(u_total, -shift)
+            v_shifted = np.roll(v_total, -shift)
+            #print(u_total)
+            #print(u_shifted)
+            valid_range = slice(0, N_u - shift)
+            #print(valid_range)
+            product_list_f = u_total[valid_range] * u_shifted[valid_range]
+            product_list_g = v_total[valid_range] * v_shifted[valid_range]
+            product_list_f_s = (u_total[valid_range] - u_shifted[valid_range])**2
+            
+            f.append(np.mean(product_list_f))
+            g.append(np.mean(product_list_g))
+            f_s.append(np.mean(product_list_f_s))
+    
+    # Normalize the correlation functions
+    if f[0] != 0:
+        f = f / f[0]
+    if g[0] != 0:
+        g = g / g[0]
+    
+    return r, f, g, f_s, max_index
+
+
+"""
+def correlation_functions_fast_legacy(pos_vector, u, v):
+    # Load tolerance and limit of plotting
+    tol = constants()[1]
+    limit = 10
+    # Calculate the maximum index of the plotted arrays
+    max_index = int(limit / tol)
+    # Assign the maximum index of the velocity array
+    N_u = len(u)
+    # Create an array of spacings to be plotted
+    r = np.linspace(tol, max_index * tol, max_index)
+    
+    # Compute the pairwise products using outer products for u and v
+    product_u = np.outer(u, u)
+    product_v = np.outer(v, v)
+    
+    # Initialize arrays for correlation functions f and g
+    f = np.zeros(max_index)
+    g = np.zeros(max_index)
+    
+    # Calculate the mean of products for each spacing
+    for k in range(1, max_index):
+        # Select the k-th diagonal for each matrix and compute the mean
+        f[k] = np.mean(np.diag(product_u, k))
+        g[k] = np.mean(np.diag(product_v, k))
+    
+    # Normalize the correlation functions
+    if f[0] != 0:
+        f = f / f[0]
+    if g[0] != 0:
+        g = g / g[0]
+    
+    return r, f[:max_index], g[:max_index]
+"""
+
+def find_nth_crossing(f_values, n):
+    """
+    Finds the nth crossing point of a function across the x-axis.
+
+    Parameters:
+    - f_values (list or np.array): The evaluated values of f at discrete x points.
+    - n (int): The crossing number to find (1 for first, 2 for second, etc.)
+
+    Returns:
+    - int: The index of the nth crossing point if it exists, else -1.
+    """
+    # Count the number of crossings found
+    crossing_count = 0
+    
+    # Iterate over pairs of consecutive values to detect sign changes
+    for i in range(1, len(f_values)):
+        # Check for sign change between f_values[i-1] and f_values[i]
+        if f_values[i-1] * f_values[i] < 0:
+            crossing_count += 1
+            # If this is the nth crossing, return the index
+            if crossing_count == n:
+                return i - 1  # Return the index of the point just before the crossing
+
+    # If the nth crossing wasn't found, return -1
+    return -1
+
+def f_and_g_filter(f, g):
+    # Find 2nd intercept for g and 1st for f
+    g_index = find_nth_crossing(g, 2)
+    f_index = find_nth_crossing(f, 1)
+    # Set values beyond this index to 0
+    f[f_index:] = 0
+    g[g_index:] = 0
+    return f, g
+
+
+from scipy.integrate import simps, trapz
+def energy_spectrum(r, f, g):
+    tol = constants()[1]
+    # Assuming r_array, f_array, and g_array are given
+    u_rms = 1  # root-mean-square velocity (value needed)
+    r_array = np.linspace(tol, len(f)*tol, len(f))  # distances (r values)
+    f_array = f  # array of f(r) values
+    g_array = g  # array of g(r) values
+
+    # Calculate R(r)
+    R_array = u_rms**2 * (g_array + f_array / 2)
+
+    # Define a range of k values (wavenumbers)
+    k_array = np.linspace(0.1, 10, len(r))  # Adjust range and density as needed
+
+    # Reshape arrays to enable broadcasting for matrix operations
+    # r_array has shape (N,), where N is the number of r values
+    # k_array has shape (M,), where M is the number of k values
+    # We need to broadcast to a shape (M, N) for simultaneous calculation
+    k_grid, r_grid = np.meshgrid(k_array, r_array, indexing='ij')  # shape (M, N)
+    sin_kr = np.sin(k_grid * r_grid)  # shape (M, N)
+
+    # Compute the integrand for all k and r values
+    integrand = R_array * r_grid * sin_kr  # shape (M, N)
+
+    # Integrate over r for each k using Simpson's rule (or np.trapz for trapezoidal rule)
+    # The axis=1 specifies integration over the r dimension
+    E_k = (2 / np.pi) * trapz(integrand * k_grid, r_array, axis=1)  # shape (M,)
+
+    # E_k now contains the energy spectrum values at each wavenumber in k_array
+    return E_k, k_array
+
+from scipy.fft import fft
+
+def energy_spec_fft(r, f, g):
+    R = g + f/2
+    N = len(r)
+    k = np.linspace(0, 8, N)
+    return
 
 def isotropic_turbulence_test_plot(pos_vector, u, v):
     tol = constants()[1]
