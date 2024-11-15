@@ -1,6 +1,5 @@
 import numpy as np
 import rotation_matrix as rm
-from joblib import Parallel, delayed
 import numba as nb
 
 def sensor_line(x_boundary, Nxf):

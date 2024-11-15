@@ -16,7 +16,7 @@ def constants():
 
     #Change x length to different values to change the size of the box
     # y and z set to 2.95
-    x_boundary = 40000
+    x_boundary = 400
     y_boundary = 2.95
     z_boundary = 2.95
     Nxf = 2*x_boundary/tol
