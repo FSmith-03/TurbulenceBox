@@ -22,44 +22,13 @@ def write_to_csv(data, filename="output.csv"):
 def main():
     #Load constants
     N_E = k.constants()[10]
-    print("Number of eddies: ", N_E)
-    Nx = k.constants()[7]
     #Initialize arrays for velocity components
-    u_total = np.zeros(Nx)
-    v_total = np.zeros(Nx)
-    w_total = np.zeros(Nx)
-    #Generate x-axis
+    u_total, v_total, w_total = k.velocities_faster_2()
     xaxis = k.positionvectorxaxis()
-    #Iterate over all eddies
-    for i in range(N_E):
-        #Print eddy number for every 1000 eddies
-        if (i+1) % 1000 == 0:
-            print("Eddy number: ", i+1)
-        #Generate random angles
-        thetax, thetay, thetaz = k.random_angles()
-        #Calculate rotation matrix
-        R = k.total_matrix(thetax, thetay, thetaz)
-        #Generate random position
-        a = k.random_position()
-        #Translate x-axis
-        xaxis_translated = xaxis - a
-        #Rotate translated x-axis
-        xaxis_rotated = R @ xaxis_translated
-        #Calculate velocity components
-        u, v, w = k.velocitylineenhanced(xaxis_rotated)
-        #Rotate velocity components by inverse angles
-        R = k.total_matrix(-thetax, -thetay, -thetaz)
-        u_rotated, v_rotated, w_rotated = R @ np.array([u, v, w])
-        #Add rotated velocity components to total velocity components
-        u_total += u_rotated
-        v_total += v_rotated
-        w_total += w_rotated
     #Plot correlation and structure functions
-    start_time = timeit.default_timer()
+    #Calculating correlation functions
     r, f, g, f_s, max_index = k.correlation_functions_vect(xaxis, u_total, v_total)
-    elapsed = timeit.default_timer() - start_time
-    print("Time elapsed: ", elapsed)
-    write_to_csv_variable = True
+    write_to_csv_variable = False
     if write_to_csv_variable == True:
         print("Writing data to output1_20000.csv")
         write_to_csv({
@@ -79,6 +48,10 @@ def main():
     f_filtered, g_filtered = k.f_and_g_filter(f, g)
     print("Plotting Structure Function")
     p.structure_plotter(r, f_s, max_index)
+    print("Calculating Townsend's Structure Function")
+    townsend = k.townsend_structure(f, r)
+    print("Plotting Townsend's Structure Function")
+    p.structure_plotter(r, townsend, max_index)
     E_k, k_array = k.energy_spectrum(r, f_filtered, g_filtered)
     print("Plotting Energy Spectrum")
     p.energy_spectrum_plot(E_k, k_array)

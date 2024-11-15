@@ -16,7 +16,7 @@ def spacefiller(x_boundary, y_boundary, z_boundary):
 def constants():
     L = 1
     tol = 0.05
-    x_boundary = 20000
+    x_boundary = 1000
     y_boundary = 2.95
     z_boundary = 2.95
     Nxf = 2*x_boundary/tol
@@ -158,7 +158,7 @@ def velocitylineenhanced(pos_vector):
     v[mask] = x[mask] * factor[mask]
     # w remains zeros as per the original logic
     
-    return u, v, w
+    return u, v, w, mask
 
 def correlation_functions(pos_vector, u, v):
     #Load tolerance and limit of plotting
@@ -244,6 +244,13 @@ def correlation_functions_vect(xaxis, u_total, v_total):
     
     return r, f, g, f_s, max_index
 
+def townsend_structure(f, r):
+    f = np.array(f)
+    f = f[0:len(r)]
+    dfdr = np.gradient(f, r)
+    townsend = -3/2  * dfdr
+    return townsend
+    
 
 """
 def correlation_functions_fast_legacy(pos_vector, u, v):
@@ -378,3 +385,175 @@ def isotropic_turbulence_test_plot(pos_vector, u, v):
     ax.set_ylabel('f')
     plt.title('Isotropic turbulence')
     plt.show()
+
+#Find the first and last idexes that the eddy has influence on
+def velocity_range(mask):
+    first_index = np.argmax(mask)
+    last_index = len(mask) - np.argmax(mask[::-1])
+    return first_index, last_index
+
+#Find the first and last indexes that the eddy has influence on from the position vector
+def masker(pos_vectors):
+    mask = np.abs(np.sqrt(pos_vectors[0]**2 + pos_vectors[1]**2 + pos_vectors[2]**2)) < 4
+    first_index = np.argmax(mask)
+    last_index = len(mask) - np.argmax(mask[::-1])
+    return mask, first_index, last_index
+
+def velocities_faster():
+    #Load constants
+    N_E = 10000
+    print("Number of eddies: ", N_E)
+    Nx = constants()[7]
+    #Initialize arrays for velocity components
+    u_total = np.zeros(Nx)
+    v_total = np.zeros(Nx)
+    w_total = np.zeros(Nx)
+    #Generate x-axis
+    xaxis = positionvectorxaxis()
+    #Iterate over all eddies
+    for i in range(N_E):
+        #Print eddy number for every 1000 eddies
+        if (i+1) % 1000 == 0:
+            print("Eddy number: ", i+1)
+        #Generate random angles
+        thetax, thetay, thetaz = random_angles()
+        #Calculate rotation matrix
+        R = total_matrix(thetax, thetay, thetaz)
+        #Generate random position
+        a = random_position()
+        #Translate x-axis
+        xaxis_translated = xaxis - a
+        #Rotate translated x-axis
+        xaxis_rotated = R @ xaxis_translated
+        #Calculate velocity components
+        u, v, w, mask = velocitylineenhanced(xaxis_rotated)
+        first_index, last_index = velocity_range(mask)
+        u = u[first_index:last_index]
+        v = v[first_index:last_index]
+        w = w[first_index:last_index]
+        #Rotate velocity components by inverse angles
+        R = total_matrix(-thetax, -thetay, -thetaz)
+        u_rotated, v_rotated, w_rotated = R @ np.array([u, v, w])
+        #Add rotated velocity components to total velocity components
+        u_total[first_index:last_index] += u_rotated
+        v_total[first_index:last_index] += v_rotated
+        w_total[first_index:last_index] += w_rotated
+    return u_total, v_total, w_total
+
+#Currently the fastest version of the function filters out points that are not within the eddy's influence
+def velocities_faster_2():
+    #Load constants
+    N_E = constants()[10]
+    print("Number of eddies: ", N_E)
+    Nx = constants()[7]
+    #Initialize arrays for velocity components
+    u_total = np.zeros(Nx)
+    v_total = np.zeros(Nx)
+    w_total = np.zeros(Nx)
+    #Generate x-axis
+    xaxis = positionvectorxaxis()
+    #Iterate over all eddies
+    for i in range(N_E):
+        #Print eddy number for every 1000 eddies
+        if (i+1) % 1000 == 0:
+            print("Eddy number: ", i+1)
+        #Generate random angles
+        thetax, thetay, thetaz = random_angles()
+        #Calculate rotation matrix
+        R = total_matrix(thetax, thetay, thetaz)
+        #Generate random position
+        a = random_position()
+        #Translate x-axis
+        xaxis_translated = xaxis - a
+        mask, first_index, last_index = masker(xaxis_translated)
+        xaxis_translated_trimmed = xaxis_translated[:, first_index:last_index]
+        #Rotate translated x-axis
+        xaxis_rotated = R @ xaxis_translated_trimmed
+        #Calculate velocity components
+        u, v, w, _ = velocitylineenhanced(xaxis_rotated)
+        #Rotate velocity components by inverse angles
+        R = total_matrix(-thetax, -thetay, -thetaz)
+        u_rotated, v_rotated, w_rotated = R @ np.array([u, v, w])
+        #Add rotated velocity components to total velocity components
+        u_total[first_index:last_index] += u_rotated
+        v_total[first_index:last_index] += v_rotated
+        w_total[first_index:last_index] += w_rotated
+    return u_total, v_total, w_total
+
+def velocities_faster_3():
+    #Load constants
+    N_E = constants()[10]
+    print("Number of eddies: ", N_E)
+    Nx = constants()[7]
+    #Initialize arrays for velocity components
+    u_total_matrix = np.zeros((Nx, N_E))
+    v_total_matrix = np.zeros((Nx, N_E))
+    w_total_matrix = np.zeros((Nx, N_E))
+    #Generate x-axis
+    xaxis = positionvectorxaxis()
+    #Iterate over all eddies
+    for i in range(N_E):
+        #Print eddy number for every 1000 eddies
+        if (i+1) % 1000 == 0:
+            print("Eddy number: ", i+1)
+        #Generate random angles
+        thetax, thetay, thetaz = random_angles()
+        #Calculate rotation matrix
+        R = total_matrix(thetax, thetay, thetaz)
+        #Generate random position
+        a = random_position()
+        #Translate x-axis
+        xaxis_translated = xaxis - a
+        mask, first_index, last_index = masker(xaxis_translated)
+        xaxis_translated_trimmed = xaxis_translated[:, first_index:last_index]
+        #Rotate translated x-axis
+        xaxis_rotated = R @ xaxis_translated_trimmed
+        #Calculate velocity components
+        u, v, w = velocitylineenhanced(xaxis_rotated)
+        #Rotate velocity components by inverse angles
+        R = total_matrix(-thetax, -thetay, -thetaz)
+        u_rotated, v_rotated, w_rotated = R @ np.array([u, v, w])
+        #Add rotated velocity components to total velocity components
+        u_total_matrix[first_index:last_index, i] = u_rotated
+        v_total_matrix[first_index:last_index, i] = v_rotated
+        w_total_matrix[first_index:last_index, i] = w_rotated
+    u_total = np.sum(u_total_matrix, axis=1)
+    v_total = np.sum(v_total_matrix, axis=1)
+    w_total = np.sum(w_total_matrix, axis=1)
+    return u_total, v_total, w_total
+
+def velocities_base():    #Load constants
+    N_E = 10000
+    print("Number of eddies: ", N_E)
+    Nx = constants()[7]
+    #Initialize arrays for velocity components
+    u_total = np.zeros(Nx)
+    v_total = np.zeros(Nx)
+    w_total = np.zeros(Nx)
+    #Generate x-axis
+    xaxis = positionvectorxaxis()
+    #Iterate over all eddies
+    for i in range(N_E):
+        #Print eddy number for every 1000 eddies
+        if (i+1) % 1000 == 0:
+            print("Eddy number: ", i+1)
+        #Generate random angles
+        thetax, thetay, thetaz = random_angles()
+        #Calculate rotation matrix
+        R = total_matrix(thetax, thetay, thetaz)
+        #Generate random position
+        a = random_position()
+        #Translate x-axis
+        xaxis_translated = xaxis - a
+        #Rotate translated x-axis
+        xaxis_rotated = R @ xaxis_translated
+        #Calculate velocity components
+        u, v, w, mask = velocitylineenhanced(xaxis_rotated)
+        #Rotate velocity components by inverse angles
+        R = total_matrix(-thetax, -thetay, -thetaz)
+        u_rotated, v_rotated, w_rotated = R @ np.array([u, v, w])
+        #Add rotated velocity components to total velocity components
+        u_total += u_rotated
+        v_total += v_rotated
+        w_total += w_rotated
+    return u_total, v_total, w_total

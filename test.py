@@ -304,7 +304,7 @@ def diagnostic_test_velocity_2(N_E):
     p.xaxisplotter(xaxis, v_total)
     p.xaxisplotter(xaxis, w_total)
 
-diagnostic_test_velocity_2(10)
+#diagnostic_test_velocity_2(10)
 
 def point_test():
     L = k.constants()[0]
@@ -321,3 +321,60 @@ def point_test():
     return u,v,w
 #print(point_test())
 #p.plot3d(3)
+
+def velocities_faster_plot():
+    starttime = timeit.default_timer()
+    u, v, w = k.velocities_faster()
+    print("Elapsed time: ", timeit.default_timer() - starttime)
+    xaxis = k.positionvectorxaxis()
+    r, f, g, f_s, max_index = k.correlation_functions_vect(xaxis, u, v)
+    p.theoretical_f(r, f, max_index)
+    p.theoretical_g(r, g, max_index)
+    plt.show()
+
+def velocities_base_plot():
+    starttime = timeit.default_timer()
+    u, v, w = k.velocities_base()
+    print("Elapsed time: ", timeit.default_timer() - starttime)
+    xaxis = k.positionvectorxaxis()
+    r, f, g, f_s, max_index = k.correlation_functions_vect(xaxis, u, v)
+    p.theoretical_f(r, f, max_index)
+    p.theoretical_g(r, g, max_index)
+    plt.show()
+
+def velocities_faster_2_plot():
+    starttime = timeit.default_timer()
+    u, v, w = k.velocities_faster_3()
+    print("Elapsed time: ", timeit.default_timer() - starttime)
+    xaxis = k.positionvectorxaxis()
+    r, f, g, f_s, max_index = k.correlation_functions_vect(xaxis, u, v)
+    p.theoretical_f(r, f, max_index)
+    p.theoretical_g(r, g, max_index)
+    plt.show()
+
+#velocities_faster_2_plot()
+
+def magnitude_test():
+    xaxis = k.positionvectorxaxis()
+    x = xaxis[0]
+    N = 100
+    U_0 = np.zeros(len(x))
+    U_1 = np.zeros(len(x))
+    for i in range(N):
+        thetax, thetay, thetaz = k.random_angles()
+        R = k.total_matrix(thetax, thetay, thetaz)
+        a = k.random_position(online=False)
+        xaxis_translated = xaxis - a
+        xaxis_rotated = R @ xaxis_translated
+        u0, v0, w0 = k.velocityline(xaxis_translated)
+        u1, v1, w1 = k.velocityline(xaxis_rotated)
+        U_0 += np.sqrt(u0**2 + v0**2 + w0**2)
+        U_1 += np.sqrt(u1**2 + v1**2 + w1**2)
+    print(np.isclose(U_0, U_1))
+    ax, fig = plt.subplots()
+    fig.plot(x, U_0, label='Original')
+    fig.plot(x, U_1, label='Rotated')
+    plt.legend()
+    plt.show()
+
+magnitude_test()
