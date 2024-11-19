@@ -1,11 +1,12 @@
 import input_settings as inp
 import random_generator as rg
-import positions_and_velocities as pv
+import positions_and_velocities_copy as pv
 import numpy as np
 import correlation_functions as cf
 import matplotlib.pyplot as plt
 import plot_correlations as pc
 import fmodpy
+
 def solver():
     # Constants
     L_e, tol, x_boundary, y_boundary, z_boundary, _, _, Nx, _, plot_limit, N_E = inp.constants()
@@ -14,6 +15,7 @@ def solver():
     print("Generating random angles and positions")
     theta_list = rg.random_angles(N_E)
     a_list = rg.random_positions(x_boundary, y_boundary, z_boundary, N_E)
+    print(a_list.shape)
     # Total velocities
     print("Calculating total velocities")
     u_total, v_total, w_total = pv.total_velocities(Nx, x_boundary, N_E, theta_list, a_list)

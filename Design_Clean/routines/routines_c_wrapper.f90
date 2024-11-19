@@ -1,0 +1,29 @@
+! This automatically generated Fortran wrapper file allows codes
+! written in Fortran to be called directly from C and translates all
+! C-style arguments into expected Fortran-style arguments (with
+! assumed size, local type declarations, etc.).
+
+
+SUBROUTINE C_MATRIX_ROTATE(THETAX, THETAY, THETAZ, R_DIM_1, R_DIM_2, R) BIND(C)
+  USE ISO_C_BINDING, ONLY: C_BOOL
+  IMPLICIT NONE
+  REAL, INTENT(IN) :: THETAX
+  REAL, INTENT(IN) :: THETAY
+  REAL, INTENT(IN) :: THETAZ
+  INTEGER(KIND=SELECTED_INT_KIND(18)), INTENT(IN) :: R_DIM_1
+  INTEGER(KIND=SELECTED_INT_KIND(18)), INTENT(IN) :: R_DIM_2
+  REAL, INTENT(OUT), DIMENSION(R_DIM_1,R_DIM_2) :: R
+
+  INTERFACE
+    SUBROUTINE MATRIX_ROTATE(THETAX, THETAY, THETAZ, R)
+      IMPLICIT NONE
+      REAL, INTENT(IN) :: THETAX
+      REAL, INTENT(IN) :: THETAY
+      REAL, INTENT(IN) :: THETAZ
+      REAL, INTENT(OUT), DIMENSION(3,3) :: R
+    END SUBROUTINE MATRIX_ROTATE
+  END INTERFACE
+
+  CALL MATRIX_ROTATE(THETAX, THETAY, THETAZ, R)
+END SUBROUTINE C_MATRIX_ROTATE
+

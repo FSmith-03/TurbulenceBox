@@ -1,11 +1,13 @@
 import numpy as np
 import rotation_matrix as rm
 import numba as nb
+import random_generator as rg
 from joblib import Parallel, delayed
 import fmodpy
+import matplotlib.pyplot as plt
 
 code = fmodpy.fimport("routines_simplified.f90")
-
+#print(dir(code))
 def sensor_line(x_boundary, Nxf):
     x = np.linspace(-x_boundary, x_boundary, Nxf)
     y = np.zeros_like(x)
@@ -32,41 +34,23 @@ def u_2_average(u_total):
     return u_2_average
 
 def total_velocities(Nx, x_boundary, N_E, theta_list, a_list):
-    u_total, v_total, w_total = np.zeros(Nx), np.zeros(Nx), np.zeros(Nx)
-    xaxis = sensor_line(x_boundary, Nx)
-    for i in range(N_E):
-        if (i+1) % 1000 == 0:
-            print("Eddy number: ", i+1)
-        a  = a_list[:,i][:, np.newaxis]
-        eddy_pos_translated = xaxis - a
-        first_index, last_index, factor = eddy_range(eddy_pos_translated)
-        eddy_pos_trimmed = eddy_pos_translated[:, first_index:last_index]
-        thetax, thetay, thetaz = theta_list[i]
-        R = rm.rotation_total(thetax, thetay, thetaz)
-        R_inv = R.T
-        eddy_pos_rotated = R @ eddy_pos_trimmed
-        u, v, w = velocity_generator(eddy_pos_rotated, factor)
-        u_rotated, v_rotated, w_rotated = R_inv @ np.array([u, v, w])
-        u_total[first_index:last_index] += u_rotated
-        v_total[first_index:last_index] += v_rotated
-        w_total[first_index:last_index] += w_rotated
-    return u_total, v_total, w_total
-
-def velocities_fortran(Nx, x_boundary, N_E, theta_list, a_list):
     xaxis = sensor_line(x_boundary, Nx)
     input = np.array([x_boundary, Nx, int(N_E)])
     velocities_total = code.main_calculation(input, a_list, theta_list)
-    # Check and separate velocity components
-    try:
-        u_total, v_total, w_total = velocities_total
-    except ValueError as e:
-        print("Error in separating velocity components:", e)
-        print("Ensure 'velocities_total' contains three components (u, v, w).")
-        return
-    u_total = u_total[:,0]
-    v_total = v_total[:,0]
-    w_total = w_total[:,0]
+    
+    print("Shape of velocities_total:", np.shape(velocities_total))
+
+    # Separate components
+    velocities_list = velocities_total[2]
+    u_total, v_total, w_total = velocities_list[:,0], velocities_list[:,1], velocities_list[:,2]
     return u_total, v_total, w_total
+
+
+a_list = rg.random_positions(1000, 2.95, 2.95, 69620)
+a_list = np.ascontiguousarray(a_list)
+theta_list = rg.random_angles(69620)
+theta_list = np.ascontiguousarray(theta_list)
+#total_velocities(40000, 1000, 69620, a_list, theta_list)
 
 def process_single_eddy(Nx, x_boundary, theta_list, a_list, i):
     u_result, v_result, w_result = np.zeros(Nx), np.zeros(Nx), np.zeros(Nx)

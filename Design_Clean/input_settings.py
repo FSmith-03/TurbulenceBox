@@ -16,7 +16,7 @@ def constants():
 
     #Change x length to different values to change the size of the box
     # y and z set to 2.95
-    x_boundary = 400
+    x_boundary = 5000
     y_boundary = 2.95
     z_boundary = 2.95
     Nxf = 2*x_boundary/tol
@@ -24,6 +24,6 @@ def constants():
     #Convert Nxf to an integer to be used in an array input
     Nx = int(Nxf)
     Nyz = int(Nyz)
-    limit = 20
+    limit = 10
     N_E = spacefiller(x_boundary, y_boundary, z_boundary)
     return L_e, tol, x_boundary, y_boundary, z_boundary, Nxf, Nyz, Nx, Nyz, limit, N_E
