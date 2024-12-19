@@ -43,7 +43,7 @@ def f_and_g_filter(r, f, g):
 
 def energy_spectrum(r, f, g, tol, u_2_avg):
     # Assuming r_array, f_array, and g_array are given
-    r_array = np.linspace(tol, len(f)*tol, len(f))  # distances (r values)
+    r_array = r  # array of r values
     f_array = f  # array of f(r) values
     g_array = g  # array of g(r) values
 
@@ -73,6 +73,18 @@ def energy_spectrum(r, f, g, tol, u_2_avg):
 def energy_spectrum_plot(E_k, k_array):
     fig, ax = plt.subplots()
     ax.plot(k_array, E_k)
-    ax.set_xlabel('k')
+    ax.set_xlabel('k=π/r')
     ax.set_ylabel('E(k)')
     plt.title('Energy Spectrum')
+
+
+def main():
+    L_e = 1.0
+    r = np.linspace(0, 5*L_e, int(5/0.05))
+    f_theoretical = np.exp(-r**2/L_e**2)
+    g_theoretical = (1 - r**2/L_e**2) * np.exp(-r**2/L_e**2)
+    E_k, k_array = energy_spectrum(r, f_theoretical, g_theoretical, 0.05, 1.0)
+    energy_spectrum_plot(E_k, k_array)
+    plt.show()
+
+#main()

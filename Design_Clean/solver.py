@@ -19,7 +19,8 @@ def solver():
     #Mean velocity squared
     u_2_average = pv.u_2_average(u_total)
     v_2_average = pv.u_2_average(v_total)
-    print(u_2_average, v_2_average)
+    w_2_average = pv.u_2_average(w_total)
+    print(u_2_average, v_2_average, w_2_average)
     # Correlation functions
     print("Calculating correlation functions")
     r, f, g, f_s, max_index_plot = cf.correlation_functions_vect(u_total, v_total, tol, plot_limit, u_2_average, v_2_average)
@@ -31,4 +32,12 @@ def solver():
     plt.show()
     return
 
-solver()
+#solver()
+
+def checks():
+    L_e, tol, x_boundary, y_boundary, z_boundary, _, _, Nx, _, plot_limit, N_E = inp.constants()
+    theta_list = rg.random_angles(N_E)
+    a_list = rg.random_positions(x_boundary, y_boundary, z_boundary, N_E)
+    pv.rotation_check(Nx, x_boundary, N_E, theta_list)
+
+checks()

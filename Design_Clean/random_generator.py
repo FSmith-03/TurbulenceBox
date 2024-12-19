@@ -3,7 +3,10 @@ import numpy as np
 
 
 def random_angles(N_eddies):
-    angles_list = np.random.uniform(0, 2*np.pi, (N_eddies, 3))
+    theta_x = np.random.uniform(0, 2 * np.pi, (N_eddies))
+    theta_y = np.random.uniform(0, 2 * np.pi, (N_eddies))
+    theta_z = np.random.uniform(0, 2 * np.pi, (N_eddies))
+    angles_list = np.array([theta_x, theta_y, theta_z])
     return angles_list
 
 

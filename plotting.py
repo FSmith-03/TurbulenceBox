@@ -47,11 +47,11 @@ def eddyplotter(A_list, axis):
 def plot3d(N_E):
     L = k.constants()[0]
     tol = k.constants()[1]
-    x_boundary = k.constants()[2]
-    y_boundary = k.constants()[3]
-    z_boundary = k.constants()[4]
-    Nx = k.constants()[7]
-    Nyz = k.constants()[8]
+    x_boundary = 5
+    y_boundary = 5
+    z_boundary = 5
+    Nx = 50
+    Nyz = 50
 
     x, y, z = np.meshgrid(np.linspace(-x_boundary*L, x_boundary*L, Nx), 
                           np.linspace(-y_boundary*L, y_boundary*L, Nyz), 
@@ -62,8 +62,8 @@ def plot3d(N_E):
     # Flatten the meshgrid arrays
     points = np.vstack([x.ravel(), y.ravel(), z.ravel()])
     for i in range(N_E):
-        a = k.random_position()
-        theta_x, theta_y, theta_z = k.random_angles()
+        a = np.array([0, 0, 0])
+        theta_x, theta_y, theta_z = np.array([0, 0, 0])
         # Combine rotation matrices
         R = k.rotation_matrix_z(theta_z) @ k.rotation_matrix_y(theta_y) @ k.rotation_matrix_x(theta_x)
         
@@ -101,7 +101,6 @@ def plot3d(N_E):
         surface_count=10,  # Number of isosurfaces
         caps=dict(x_show=False, y_show=False, z_show=False)
     ))
-    
     fig.update_layout(scene=dict(
         xaxis_title='X',
         yaxis_title='Y',
@@ -110,6 +109,7 @@ def plot3d(N_E):
     
     fig.show()
 
+plot3d(1)
 def plot3d_change_order(N_E, theta=0):
     L = k.constants()[0]
     tol = k.constants()[1]

@@ -2,9 +2,7 @@ import numpy as np
 import rotation_matrix as rm
 import numba as nb
 from joblib import Parallel, delayed
-import fmodpy
 
-code = fmodpy.fimport("routines_simplified.f90")
 
 def sensor_line(x_boundary, Nxf):
     x = np.linspace(-x_boundary, x_boundary, Nxf)
@@ -31,6 +29,18 @@ def u_2_average(u_total):
     u_2_average = np.mean(u_2)
     return u_2_average
 
+def rotation_check(Nx, x_boundary, N_E, theta_list):
+    xaxis = sensor_line(x_boundary, Nx)
+    for i in range(N_E):
+        thetax, thetay, thetaz = theta_list[:,i]
+        R = rm.rotation_total(thetax, thetay, thetaz)
+        R_inv = R.T
+        xaxis_rotated = R @ xaxis
+        xaxis_rotated_back = R_inv @ xaxis_rotated
+        assert np.allclose(xaxis, xaxis_rotated_back)
+        print(xaxis_rotated_back)
+    print("Rotation check passed")
+
 def total_velocities(Nx, x_boundary, N_E, theta_list, a_list):
     u_total, v_total, w_total = np.zeros(Nx), np.zeros(Nx), np.zeros(Nx)
     xaxis = sensor_line(x_boundary, Nx)
@@ -41,7 +51,7 @@ def total_velocities(Nx, x_boundary, N_E, theta_list, a_list):
         eddy_pos_translated = xaxis - a
         first_index, last_index, factor = eddy_range(eddy_pos_translated)
         eddy_pos_trimmed = eddy_pos_translated[:, first_index:last_index]
-        thetax, thetay, thetaz = theta_list[i]
+        thetax, thetay, thetaz = theta_list[:,i]
         R = rm.rotation_total(thetax, thetay, thetaz)
         R_inv = R.T
         eddy_pos_rotated = R @ eddy_pos_trimmed
@@ -50,22 +60,6 @@ def total_velocities(Nx, x_boundary, N_E, theta_list, a_list):
         u_total[first_index:last_index] += u_rotated
         v_total[first_index:last_index] += v_rotated
         w_total[first_index:last_index] += w_rotated
-    return u_total, v_total, w_total
-
-def velocities_fortran(Nx, x_boundary, N_E, theta_list, a_list):
-    xaxis = sensor_line(x_boundary, Nx)
-    input = np.array([x_boundary, Nx, int(N_E)])
-    velocities_total = code.main_calculation(input, a_list, theta_list)
-    # Check and separate velocity components
-    try:
-        u_total, v_total, w_total = velocities_total
-    except ValueError as e:
-        print("Error in separating velocity components:", e)
-        print("Ensure 'velocities_total' contains three components (u, v, w).")
-        return
-    u_total = u_total[:,0]
-    v_total = v_total[:,0]
-    w_total = w_total[:,0]
     return u_total, v_total, w_total
 
 def process_single_eddy(Nx, x_boundary, theta_list, a_list, i):

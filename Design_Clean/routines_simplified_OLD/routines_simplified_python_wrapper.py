@@ -96,61 +96,9 @@ def matrix_rotate(thetax, thetay, thetaz):
 
 
 # ----------------------------------------------
-# Wrapper for the Fortran subroutine MATRIX_MULTIPLY
-
-def matrix_multiply(a, b, out=None):
-    '''! This subroutine multiplies the matrices A and B.
-!
-! INPUT:
-!   A(M,N)  --  A 2D matrix of 64 bit floats.
-!   B(N,P)  --  A 2D matrix of 64 bit floats,
-!
-! OUTPUT:
-!   OUT(M,P)  --  The matrix that is the result of (AB).'''
-    
-    # Setting up "a"
-    if ((not issubclass(type(a), numpy.ndarray)) or
-        (not numpy.asarray(a).flags.f_contiguous) or
-        (not (a.dtype == numpy.dtype(ctypes.c_double)))):
-        import warnings
-        warnings.warn("The provided argument 'a' was not an f_contiguous NumPy array of type 'ctypes.c_double' (or equivalent). Automatically converting (probably creating a full copy).")
-        a = numpy.asarray(a, dtype=ctypes.c_double, order='F')
-    a_dim_1 = ctypes.c_long(a.shape[0])
-    a_dim_2 = ctypes.c_long(a.shape[1])
-    
-    # Setting up "b"
-    if ((not issubclass(type(b), numpy.ndarray)) or
-        (not numpy.asarray(b).flags.f_contiguous) or
-        (not (b.dtype == numpy.dtype(ctypes.c_double)))):
-        import warnings
-        warnings.warn("The provided argument 'b' was not an f_contiguous NumPy array of type 'ctypes.c_double' (or equivalent). Automatically converting (probably creating a full copy).")
-        b = numpy.asarray(b, dtype=ctypes.c_double, order='F')
-    b_dim_1 = ctypes.c_long(b.shape[0])
-    b_dim_2 = ctypes.c_long(b.shape[1])
-    
-    # Setting up "out"
-    if (out is None):
-        out = numpy.zeros(shape=(a.shape[0], b.shape[1]), dtype=ctypes.c_double, order='F')
-    elif ((not issubclass(type(out), numpy.ndarray)) or
-          (not numpy.asarray(out).flags.f_contiguous) or
-          (not (out.dtype == numpy.dtype(ctypes.c_double)))):
-        import warnings
-        warnings.warn("The provided argument 'out' was not an f_contiguous NumPy array of type 'ctypes.c_double' (or equivalent). Automatically converting (probably creating a full copy).")
-        out = numpy.asarray(out, dtype=ctypes.c_double, order='F')
-    out_dim_1 = ctypes.c_long(out.shape[0])
-    out_dim_2 = ctypes.c_long(out.shape[1])
-
-    # Call C-accessible Fortran wrapper.
-    clib.c_matrix_multiply(ctypes.byref(a_dim_1), ctypes.byref(a_dim_2), ctypes.c_void_p(a.ctypes.data), ctypes.byref(b_dim_1), ctypes.byref(b_dim_2), ctypes.c_void_p(b.ctypes.data), ctypes.byref(out_dim_1), ctypes.byref(out_dim_2), ctypes.c_void_p(out.ctypes.data))
-
-    # Return final results, 'INTENT(OUT)' arguments only.
-    return out
-
-
-# ----------------------------------------------
 # Wrapper for the Fortran subroutine TRIMMER_INDEX
 
-def trimmer_index(pos_vectors, first_and_last=None):
+def trimmer_index(pos_vectors, tol, first_and_last=None):
     ''''''
     
     # Setting up "pos_vectors"
@@ -162,6 +110,9 @@ def trimmer_index(pos_vectors, first_and_last=None):
         pos_vectors = numpy.asarray(pos_vectors, dtype=ctypes.c_float, order='F')
     pos_vectors_dim_1 = ctypes.c_long(pos_vectors.shape[0])
     pos_vectors_dim_2 = ctypes.c_long(pos_vectors.shape[1])
+    
+    # Setting up "tol"
+    if (type(tol) is not ctypes.c_float): tol = ctypes.c_float(tol)
     
     # Setting up "first_and_last"
     if (first_and_last is None):
@@ -175,7 +126,7 @@ def trimmer_index(pos_vectors, first_and_last=None):
     first_and_last_dim_1 = ctypes.c_long(first_and_last.shape[0])
 
     # Call C-accessible Fortran wrapper.
-    clib.c_trimmer_index(ctypes.byref(pos_vectors_dim_1), ctypes.byref(pos_vectors_dim_2), ctypes.c_void_p(pos_vectors.ctypes.data), ctypes.byref(first_and_last_dim_1), ctypes.c_void_p(first_and_last.ctypes.data))
+    clib.c_trimmer_index(ctypes.byref(pos_vectors_dim_1), ctypes.byref(pos_vectors_dim_2), ctypes.c_void_p(pos_vectors.ctypes.data), ctypes.byref(tol), ctypes.byref(first_and_last_dim_1), ctypes.c_void_p(first_and_last.ctypes.data))
 
     # Return final results, 'INTENT(OUT)' arguments only.
     return first_and_last
@@ -291,79 +242,6 @@ def velocity_calc(xaxis_trimmed):
 
 
 # ----------------------------------------------
-# Wrapper for the Fortran subroutine VECTOR_SUMS
-
-def vector_sums(u, v, w, u_total, v_total, w_total, first_index, last_index):
-    ''''''
-    
-    # Setting up "u"
-    if ((not issubclass(type(u), numpy.ndarray)) or
-        (not numpy.asarray(u).flags.f_contiguous) or
-        (not (u.dtype == numpy.dtype(ctypes.c_float)))):
-        import warnings
-        warnings.warn("The provided argument 'u' was not an f_contiguous NumPy array of type 'ctypes.c_float' (or equivalent). Automatically converting (probably creating a full copy).")
-        u = numpy.asarray(u, dtype=ctypes.c_float, order='F')
-    u_dim_1 = ctypes.c_long(u.shape[0])
-    
-    # Setting up "v"
-    if ((not issubclass(type(v), numpy.ndarray)) or
-        (not numpy.asarray(v).flags.f_contiguous) or
-        (not (v.dtype == numpy.dtype(ctypes.c_float)))):
-        import warnings
-        warnings.warn("The provided argument 'v' was not an f_contiguous NumPy array of type 'ctypes.c_float' (or equivalent). Automatically converting (probably creating a full copy).")
-        v = numpy.asarray(v, dtype=ctypes.c_float, order='F')
-    v_dim_1 = ctypes.c_long(v.shape[0])
-    
-    # Setting up "w"
-    if ((not issubclass(type(w), numpy.ndarray)) or
-        (not numpy.asarray(w).flags.f_contiguous) or
-        (not (w.dtype == numpy.dtype(ctypes.c_float)))):
-        import warnings
-        warnings.warn("The provided argument 'w' was not an f_contiguous NumPy array of type 'ctypes.c_float' (or equivalent). Automatically converting (probably creating a full copy).")
-        w = numpy.asarray(w, dtype=ctypes.c_float, order='F')
-    w_dim_1 = ctypes.c_long(w.shape[0])
-    
-    # Setting up "u_total"
-    if ((not issubclass(type(u_total), numpy.ndarray)) or
-        (not numpy.asarray(u_total).flags.f_contiguous) or
-        (not (u_total.dtype == numpy.dtype(ctypes.c_float)))):
-        import warnings
-        warnings.warn("The provided argument 'u_total' was not an f_contiguous NumPy array of type 'ctypes.c_float' (or equivalent). Automatically converting (probably creating a full copy).")
-        u_total = numpy.asarray(u_total, dtype=ctypes.c_float, order='F')
-    u_total_dim_1 = ctypes.c_long(u_total.shape[0])
-    
-    # Setting up "v_total"
-    if ((not issubclass(type(v_total), numpy.ndarray)) or
-        (not numpy.asarray(v_total).flags.f_contiguous) or
-        (not (v_total.dtype == numpy.dtype(ctypes.c_float)))):
-        import warnings
-        warnings.warn("The provided argument 'v_total' was not an f_contiguous NumPy array of type 'ctypes.c_float' (or equivalent). Automatically converting (probably creating a full copy).")
-        v_total = numpy.asarray(v_total, dtype=ctypes.c_float, order='F')
-    v_total_dim_1 = ctypes.c_long(v_total.shape[0])
-    
-    # Setting up "w_total"
-    if ((not issubclass(type(w_total), numpy.ndarray)) or
-        (not numpy.asarray(w_total).flags.f_contiguous) or
-        (not (w_total.dtype == numpy.dtype(ctypes.c_float)))):
-        import warnings
-        warnings.warn("The provided argument 'w_total' was not an f_contiguous NumPy array of type 'ctypes.c_float' (or equivalent). Automatically converting (probably creating a full copy).")
-        w_total = numpy.asarray(w_total, dtype=ctypes.c_float, order='F')
-    w_total_dim_1 = ctypes.c_long(w_total.shape[0])
-    
-    # Setting up "first_index"
-    if (type(first_index) is not ctypes.c_int): first_index = ctypes.c_int(first_index)
-    
-    # Setting up "last_index"
-    if (type(last_index) is not ctypes.c_int): last_index = ctypes.c_int(last_index)
-
-    # Call C-accessible Fortran wrapper.
-    clib.c_vector_sums(ctypes.byref(u_dim_1), ctypes.c_void_p(u.ctypes.data), ctypes.byref(v_dim_1), ctypes.c_void_p(v.ctypes.data), ctypes.byref(w_dim_1), ctypes.c_void_p(w.ctypes.data), ctypes.byref(u_total_dim_1), ctypes.c_void_p(u_total.ctypes.data), ctypes.byref(v_total_dim_1), ctypes.c_void_p(v_total.ctypes.data), ctypes.byref(w_total_dim_1), ctypes.c_void_p(w_total.ctypes.data), ctypes.byref(first_index), ctypes.byref(last_index))
-
-    # Return final results, 'INTENT(OUT)' arguments only.
-    return u_total, v_total, w_total
-
-
-# ----------------------------------------------
 # Wrapper for the Fortran subroutine MAIN_CALCULATION
 
 def main_calculation(input_ints, a_list, theta_list):
@@ -417,7 +295,7 @@ def main_calculation(input_ints, a_list, theta_list):
         velocity_total = None
     
     # Return final results, 'INTENT(OUT)' arguments only.
-    return a_list, theta_list, velocity_total
+    return velocity_total
 
 
 # ----------------------------------------------
